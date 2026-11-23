@@ -1,261 +1,270 @@
 #!/usr/bin/env python3
-"""Build entry.png for make.fun news-image-20261123.
+"""Compose the front page for make.fun news-image-20261123.
 
-A 1024x1024 newspaper front page summing up the world news of Monday
-23 November 2026. The page is laid out from a painted hero illustration
-of the day's lead story (a tanker ablaze in the Strait of Hormuz) plus
-six short story cards, all text rendered with PIL so every word is crisp
-and legible at small sizes.
+The page is a 1024x1024 newspaper front page for Monday 23 November
+2026. A painted illustration of the day's biggest story — a tanker
+burning in the Strait of Hormuz — sits under the masthead, and below
+it six short cards carry the other stories that defined the day. All
+the lettering is drawn with PIL, so the text stays sharp at any size.
 
-Stories were checked against the 23 November 2026 reporting itself:
-the Hormuz/Bahrain escalation and the two tankers hit (CNBC Indonesia /
-jawawa, strategicenergymap, theworldopinion); the COP31 collapse in
-Antalya with the EU rejecting a draft that omits fossil fuels (UN News,
-CNN, Le Monde); the Russian drone strike on Dymer in the Kyiv region
-with 14 missing (stablenews, spyglassnews); South Korea's education
-minister Choi Kyo-jin resigning over the AI exam-cheating scandal
-(stablenews, spyglassnews); cost-of-living marches in Lisbon and across
-Europe (englishnewsroom); and the confectionery factory fire west of
-Jakarta, three dead and 36 missing (spyglassnews, englishnewsroom).
+What the page says comes from the reporting of 23 November 2026
+itself: the Hormuz/Bahrain escalation and the two tankers struck
+(CNBC Indonesia / jawawa, strategicenergymap, theworldopinion); the
+COP31 talks in Antalya collapsing after the EU rejected a draft that
+left fossil fuels out (UN News, CNN, Le Monde); a Russian drone
+hitting a home in Dymer, Kyiv region, with 14 people missing
+(stablenews, spyglassnews); South Korea's education minister Choi
+Kyo-jin stepping down over an AI exam-cheating scandal (stablenews,
+spyglassnews); cost-of-living marches in Lisbon and across Europe
+(englishnewsroom); and a confectionery factory fire west of Jakarta
+that left three dead and 36 missing (spyglassnews, englishnewsroom).
 
-Where reports conflict, the page states only what the reporting
-confirms: Bahrain accused Iran of striking a civilian industrial site
-(the IRGC's claim to have hit US bases is unverified), and the factory
-fire toll is the three dead / 36 missing reported on the day.
+Where the reporting disagreed, the page only prints what was
+confirmed on the day: Bahrain accused Iran of hitting a civilian
+industrial site (the IRGC claim of striking US bases was not
+verified), and the factory toll is the three dead and 36 missing
+reported that day.
 
-Run:  python3 compose.py        (writes entry.png next to this file)
+Run it with:  python3 compose.py     (writes entry.png beside it)
 """
 
 import hashlib
 import os
 import sys
+from dataclasses import dataclass
 
 from PIL import Image, ImageDraw, ImageFont
 
-PAGE_W, PAGE_H = 1024, 1024
-NEWS_CREAM = (250, 246, 236)
-CARD_WHITE = (255, 253, 247)
-INK = (26, 30, 40)
-GREY = (96, 102, 116)
-NAVY = (20, 33, 61)
-GOLD = (198, 160, 38)
-HAIRLINE = (214, 209, 194)
-CAPTION_DARK = (16, 20, 30)
-
-HERO_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
+HERE = os.path.dirname(os.path.abspath(__file__))
+HERO = os.path.join(
+    HERE,
     "assets",
     "media-generation-hormuz-hero-20261123-0-9a14cb43-b8e7-4190-a9a1-ff4b76e3145a.webp",
 )
+OUT = os.path.join(HERE, "entry.png")
 
-SERIF_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
-SANS = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-SANS_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+PAGE = (1024, 1024)
+PAPER = (250, 246, 236)          # warm newsprint cream
+CARD = (255, 253, 247)           # card white
+TEXT = (26, 30, 40)              # near-black ink
+MUTED = (96, 102, 116)           # body grey
+DARK_BLUE = (20, 33, 61)         # masthead navy
+BRASS = (198, 160, 38)           # gold rule
+EDGE = (214, 209, 194)           # card hairline
+CAPTION_BG = (16, 20, 30)        # caption bar
 
-# (kicker, accent colour, headline, summary) — the six stories of the day.
-STORIES = [
-    (
-        "WAR \u00b7 STRAIT OF HORMUZ",
+TITLE_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
+BODY_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+BOLD_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+
+@dataclass
+class Story:
+    section: str
+    colour: tuple
+    headline: str
+    deck: str
+
+
+DAY_STORIES = [
+    Story(
+        "WAR · STRAIT OF HORMUZ",
         (178, 34, 34),
         "WAR WIDENS AT HORMUZ",
         "Iran strikes a site in Bahrain, Houthis target Saudi Arabia, "
         "and two tankers are hit leaving the strait.",
     ),
-    (
-        "CLIMATE \u00b7 ANTALYA",
+    Story(
+        "CLIMATE · ANTALYA",
         (34, 110, 58),
         "COP31 DEAL REJECTED",
         "The EU and other nations reject a draft pact that omits fossil "
         "fuels; the summit ends with no agreement.",
     ),
-    (
-        "WAR \u00b7 KYIV REGION",
+    Story(
+        "WAR · KYIV REGION",
         (88, 58, 118),
         "14 MISSING IN KYIV STRIKE",
         "A Russian drone hits a residential building; at least 14 people "
         "are missing, Zelenskiy says.",
     ),
-    (
-        "POLITICS \u00b7 SEOUL",
+    Story(
+        "POLITICS · SEOUL",
         (28, 88, 138),
         "MINISTER QUITS IN AI SCANDAL",
         "South Korea's education minister resigns over an AI cheating "
         "scandal.",
     ),
-    (
-        "EUROPE \u00b7 LISBON",
+    Story(
+        "EUROPE · LISBON",
         (172, 82, 22),
         "LISBON MARCHES ON COSTS",
         "Thousands take to the streets as the rising cost of living fuels "
         "anger across Portugal.",
     ),
-    (
-        "DISASTER \u00b7 INDONESIA",
+    Story(
+        "DISASTER · INDONESIA",
         (14, 118, 100),
         "FACTORY FIRE: 36 MISSING",
         "Three dead and 36 missing after a fire at a factory in Indonesia.",
     ),
 ]
 
-CAPTION = "STRAIT OF HORMUZ \u2014 Tankers ablaze as the Iran\u2013US war widens"
-FOOTER = (
-    "Six stories that defined the day \u2014 Monday 23 November 2026 "
-    "\u00b7 as reported by the world's press"
+HERO_CAPTION = "STRAIT OF HORMUZ — Tankers ablaze as the Iran–US war widens"
+PAGE_FOOTER = (
+    "Six stories that defined the day — Monday 23 November 2026 "
+    "· as reported by the world's press"
 )
 
 
-def load_font(path, size):
+def font(path, size):
     return ImageFont.truetype(path, size)
 
 
-def fit_cover(img, width, height):
-    """Centre-crop `img` to the target aspect ratio, then scale to fit.
+def cover_crop(img, width, height):
+    """Crop `img` to the wanted aspect ratio, then scale it to size.
 
-    A plain resize would squash a wide illustration into a short band;
-    cropping first keeps the tanker and the warships at true proportions.
+    Stretching a wide painting into a short strip would squash the
+    tanker and the warships, so the sides (or top and bottom) are
+    trimmed first and the proportions stay true.
     """
-    iw, ih = img.size
-    want = width / height
-    if iw / ih > want:  # too wide: trim the sides
-        new_w = int(ih * want)
-        left = (iw - new_w) // 2
-        img = img.crop((left, 0, left + new_w, ih))
-    else:  # too tall: trim top and bottom
-        new_h = int(iw / want)
-        top = (ih - new_h) // 2
-        img = img.crop((0, top, iw, top + new_h))
+    w, h = img.size
+    ratio = width / height
+    if w / h > ratio:
+        keep = int(h * ratio)
+        start = (w - keep) // 2
+        img = img.crop((start, 0, start + keep, h))
+    else:
+        keep = int(w / ratio)
+        start = (h - keep) // 2
+        img = img.crop((0, start, w, start + keep))
     return img.resize((width, height), Image.LANCZOS)
 
 
-def split_lines(draw, text, fnt, max_width):
-    """Greedy word wrap returning the lines of `text` that fit `max_width`."""
-    lines = []
-    current = ""
+def wrap(draw, text, fnt, width):
+    """Break `text` into as few lines as fit inside `width` pixels."""
+    lines, line = [], ""
     for word in text.split():
-        trial = (current + " " + word).strip()
-        if draw.textlength(trial, font=fnt) <= max_width:
-            current = trial
+        candidate = f"{line} {word}".strip()
+        if draw.textlength(candidate, font=fnt) <= width:
+            line = candidate
         else:
-            if current:
-                lines.append(current)
-            current = word
-    if current:
-        lines.append(current)
+            if line:
+                lines.append(line)
+            line = word
+    if line:
+        lines.append(line)
     return lines
 
 
-def centred_text(draw, text, fnt, y, colour):
-    draw.text(
-        (PAGE_W // 2 - draw.textlength(text, font=fnt) / 2, y),
-        text,
-        font=fnt,
-        fill=colour,
-    )
+def centered(draw, text, fnt, y, fill):
+    """Draw `text` centred across the whole page at height `y`."""
+    x = PAGE[0] // 2 - draw.textlength(text, font=fnt) / 2
+    draw.text((x, y), text, font=fnt, fill=fill)
 
 
-def draw_card(draw, box, index, kicker, accent, headline, summary):
-    """One story card: coloured spine, number disc, kicker, headline, text."""
+def grid_box(col, row):
+    """The box of one card in the two-column, three-row grid."""
+    margin, gap, top = 24, 16, 452
+    w = (PAGE[0] - 2 * margin - gap) // 2
+    h = 164
+    x = margin + col * (w + gap)
+    y = top + row * (h + 12)
+    return (x, y, x + w, y + h)
+
+
+def draw_story_card(draw, box, number, story):
+    """One card: coloured edge, numbered disc, section, headline, deck."""
     x0, y0, x1, y1 = box
-    draw.rounded_rectangle(box, radius=10, fill=CARD_WHITE,
-                           outline=HAIRLINE, width=1)
-    draw.rectangle([x0, y0 + 10, x0 + 6, y1 - 10], fill=accent)
+    draw.rounded_rectangle(box, radius=10, fill=CARD, outline=EDGE, width=1)
+    draw.rectangle([x0, y0 + 10, x0 + 6, y1 - 10], fill=story.colour)
 
-    text_x = x0 + 22
-    inner_w = x1 - text_x - 18
+    tx = x0 + 22
+    inner = x1 - tx - 18
 
     disc = (x1 - 46, y0 + 12, x1 - 16, y0 + 42)
-    draw.ellipse(disc, fill=accent)
-    num_font = load_font(SANS_BOLD, 17)
-    label = str(index)
+    draw.ellipse(disc, fill=story.colour)
+    num = font(BOLD_FONT, 17)
+    label = str(number)
     draw.text(
-        (disc[0] + 15 - draw.textlength(label, font=num_font) / 2, y0 + 15),
+        (disc[0] + 15 - draw.textlength(label, font=num) / 2, y0 + 15),
         label,
-        font=num_font,
+        font=num,
         fill=(255, 255, 255),
     )
 
-    draw.text((text_x, y0 + 13), kicker,
-              font=load_font(SANS_BOLD, 14), fill=accent)
+    draw.text((tx, y0 + 13), story.section,
+              font=font(BOLD_FONT, 14), fill=story.colour)
 
-    head_font = load_font(SANS_BOLD, 24)
+    head = font(BOLD_FONT, 24)
     y = y0 + 40
-    for line in split_lines(draw, headline, head_font, inner_w)[:2]:
-        draw.text((text_x, y), line, font=head_font, fill=INK)
+    for line in wrap(draw, story.headline, head, inner)[:2]:
+        draw.text((tx, y), line, font=head, fill=TEXT)
         y += 29
 
-    body_font = load_font(SANS, 16)
+    body = font(BODY_FONT, 16)
     y += 5
-    for line in split_lines(draw, summary, body_font, inner_w)[:3]:
-        draw.text((text_x, y), line, font=body_font, fill=GREY)
+    for line in wrap(draw, story.deck, body, inner)[:3]:
+        draw.text((tx, y), line, font=body, fill=MUTED)
         y += 22
 
 
-def render():
-    page = Image.new("RGB", (PAGE_W, PAGE_H), NEWS_CREAM)
+def build_page():
+    page = Image.new("RGB", PAGE, PAPER)
     draw = ImageDraw.Draw(page)
 
-    # Masthead: navy band, gold rule, paper name and date.
-    draw.rectangle([0, 0, PAGE_W, 92], fill=NAVY)
-    draw.rectangle([0, 92, PAGE_W, 96], fill=GOLD)
-    centred_text(draw, "THE WORLD IN ONE DAY",
-                 load_font(SERIF_BOLD, 44), 8, NEWS_CREAM)
-    centred_text(draw, "MONDAY \u00b7 23 NOVEMBER 2026",
-                 load_font(SANS_BOLD, 24), 58, (222, 182, 74))
+    # Masthead: a navy band with a gold rule, paper name and date.
+    draw.rectangle([0, 0, PAGE[0], 92], fill=DARK_BLUE)
+    draw.rectangle([0, 92, PAGE[0], 96], fill=BRASS)
+    centered(draw, "THE WORLD IN ONE DAY", font(TITLE_FONT, 44), 8, PAPER)
+    centered(draw, "MONDAY · 23 NOVEMBER 2026",
+             font(BOLD_FONT, 24), 58, (222, 182, 74))
 
-    # Hero illustration, centre-cropped to the band, with a caption bar.
-    hero = Image.open(HERO_PATH).convert("RGB")
-    hero = fit_cover(hero, PAGE_W, 340)
-    page.paste(hero, (0, 96))
+    # The hero painting, cropped to its band, with a caption strip.
+    hero = Image.open(HERO).convert("RGB")
+    page.paste(cover_crop(hero, PAGE[0], 340), (0, 96))
     draw = ImageDraw.Draw(page)
-    draw.rectangle([0, 396, PAGE_W, 436], fill=CAPTION_DARK)
-    draw.rectangle([0, 436, PAGE_W, 440], fill=GOLD)
-    centred_text(draw, CAPTION, load_font(SANS_BOLD, 21), 406,
-                 (247, 243, 234))
+    draw.rectangle([0, 396, PAGE[0], 436], fill=CAPTION_BG)
+    draw.rectangle([0, 436, PAGE[0], 440], fill=BRASS)
+    centered(draw, HERO_CAPTION, font(BOLD_FONT, 21), 406, (247, 243, 234))
 
-    # Six story cards: two columns, three rows.
-    margin, gap, top = 24, 16, 452
-    card_w = (PAGE_W - 2 * margin - gap) // 2
-    card_h = 164
-    for i, (kicker, accent, headline, summary) in enumerate(STORIES):
-        col, row = i % 2, i // 2
-        x0 = margin + col * (card_w + gap)
-        y0 = top + row * (card_h + 12)
-        draw_card(draw, (x0, y0, x0 + card_w, y0 + card_h), i + 1,
-                  kicker, accent, headline, summary)
+    # The six stories, two across and three down.
+    for i, story in enumerate(DAY_STORIES):
+        draw_story_card(draw, grid_box(i % 2, i // 2), i + 1, story)
 
-    centred_text(draw, FOOTER, load_font(SANS, 15), 992, GREY)
+    centered(draw, PAGE_FOOTER, font(BODY_FONT, 15), 992, MUTED)
     return page
 
 
-def check_gate(path):
-    """The kit gate: a whole PNG, at most 1024x1024 and at most 1 MiB.
+def verify_gate(path):
+    """The competition gate: a complete PNG, 1024x1024, at most 1 MiB.
 
-    The file must start with the PNG signature, fully decode (a truncated
-    file fails here, not at the judge), and match the declared dimensions.
+    The file has to open with the PNG signature, decode fully (a cut
+    file fails here rather than at the judge), and match the size the
+    entrypoint promises.
     """
     with open(path, "rb") as fh:
-        magic = fh.read(8)
-    if magic != b"\x89PNG\r\n\x1a\n":
-        raise SystemExit(f"gate failed: {path} has no PNG signature")
+        head = fh.read(8)
+    if head != b"\x89PNG\r\n\x1a\n":
+        sys.exit(f"gate failed: {path} has no PNG signature")
     with Image.open(path) as im:
         if im.format != "PNG":
-            raise SystemExit(f"gate failed: {path} is {im.format}, not PNG")
-        im.load()  # decode every chunk: a truncated file raises here
-        if im.size != (PAGE_W, PAGE_H):
-            raise SystemExit(f"gate failed: {path} is {im.size}")
+            sys.exit(f"gate failed: {path} is {im.format}, not PNG")
+        im.load()
+        if im.size != PAGE:
+            sys.exit(f"gate failed: {path} is {im.size}, not {PAGE}")
     size = os.path.getsize(path)
-    if size > 1_048_576:
-        raise SystemExit(f"gate failed: {path} is {size} bytes (> 1 MiB)")
-    digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
-    print(f"gate ok: {path} {PAGE_W}x{PAGE_H} {size} bytes sha256={digest}")
+    if size > 1024 * 1024:
+        sys.exit(f"gate failed: {path} is {size} bytes, over 1 MiB")
+    with open(path, "rb") as fh:
+        digest = hashlib.sha256(fh.read()).hexdigest()
+    print(f"gate ok: {path} {PAGE[0]}x{PAGE[1]} {size} bytes sha256={digest}")
 
 
 def main():
-    out = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       "entry.png")
-    render().save(out, optimize=True)
-    print(f"wrote {out}")
-    check_gate(out)
+    build_page().save(OUT, optimize=True)
+    print(f"wrote {OUT} ({os.path.getsize(OUT)} bytes)")
+    verify_gate(OUT)
 
 
 if __name__ == "__main__":

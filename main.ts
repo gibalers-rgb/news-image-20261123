@@ -1,52 +1,94 @@
-// news-image-20261123 — entrypoint (Node 22, standard library only).
+// news-image-20261123 — the program that ships the entry.
 //
-// The entry is the newspaper front page shipped beside this file:
-// read it in, check it is the whole PNG the kit gate expects, and write
-// it out byte for byte as entry.png, so both grader runs produce the
-// exact same bytes. The image sums up the world news of Monday
-// 23 November 2026 — the Hormuz/Bahrain escalation, the COP31 collapse,
-// the Kyiv-region drone strike, the Seoul minister's resignation, the
-// Lisbon cost-of-living march and the Indonesian factory fire.
+// The entry itself is a single picture: a newspaper front page for
+// Monday 23 November 2026, stored next to this file as entry.png.
+// All this program does is hand that picture over to the grader,
+// unchanged, and prove it did. It reads the PNG, makes sure it is
+// really the picture the competition expects — a genuine 1024 by 1024
+// PNG, no bigger than a mebibyte — writes it to the output folder
+// under the same name, and reads it back to confirm every byte
+// arrived. Run it twice and the output is identical both times,
+// because the input never changes.
 //
-// Local check:  mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+// Try it locally with:
+//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const MAX_BYTES = 1_048_576;
-const EXPECTED_WIDTH = 1024;
-const EXPECTED_HEIGHT = 1024;
+const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+const MAX_SIZE_BYTES = 1024 * 1024;
+const WANT_WIDTH = 1024;
+const WANT_HEIGHT = 1024;
 
-const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
-const sourcePath = new URL('./entry.png', import.meta.url);
+const repoDir = dirname(fileURLToPath(import.meta.url));
+const sourceFile = join(repoDir, 'entry.png');
+// An empty MAKEFUN_OUTPUT_DIR counts as unset, so a stray empty
+// variable cannot make the program write into the current folder.
+const outDir = process.env.MAKEFUN_OUTPUT_DIR?.trim()
+  ? process.env.MAKEFUN_OUTPUT_DIR
+  : '/output';
 
-const image = readFileSync(sourcePath);
-if (!image.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)) {
-  throw new Error('entry.png is not a PNG file');
-}
-if (image.length > MAX_BYTES) {
-  throw new Error(`entry.png is ${image.length} bytes, over the 1 MiB gate`);
-}
-// The IHDR chunk follows the 8-byte signature: 4-byte length, 4-byte
-// "IHDR", then width and height as 4-byte big-endian integers.
-if (image.subarray(12, 16).toString('latin1') !== 'IHDR') {
-  throw new Error('entry.png has no IHDR chunk');
-}
-const width = image.readUInt32BE(16);
-const height = image.readUInt32BE(20);
-if (width !== EXPECTED_WIDTH || height !== EXPECTED_HEIGHT) {
-  throw new Error(`entry.png is ${width}x${height}, expected 1024x1024`);
+function fail(message: string): never {
+  throw new Error(`entry.png rejected: ${message}`);
 }
 
-mkdirSync(outDir, { recursive: true });
-const target = join(outDir, 'entry.png');
-writeFileSync(target, image);
-
-const written = readFileSync(target);
-if (!written.equals(image)) {
-  throw new Error('entry.png written to /output does not match the source');
+function readSource(): Buffer {
+  let data: Buffer;
+  try {
+    data = readFileSync(sourceFile);
+  } catch {
+    fail(`cannot read ${sourceFile}`);
+  }
+  return data!;
 }
-const sha = createHash('sha256').update(written).digest('hex');
-console.log(`wrote ${target} (${statSync(target).size} bytes, sha256=${sha})`);
+
+function checkPng(data: Buffer): void {
+  if (data.length < 24) {
+    fail(`only ${data.length} bytes, too short to be a PNG`);
+  }
+  if (!data.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    fail('does not start with the PNG signature');
+  }
+  if (data.length > MAX_SIZE_BYTES) {
+    fail(`${data.length} bytes, over the 1 MiB limit`);
+  }
+  // Inside the file, the first chunk is IHDR: four bytes of length,
+  // the four letters "IHDR", then width and height as big-endian
+  // 32-bit numbers.
+  if (data.subarray(12, 16).toString('ascii') !== 'IHDR') {
+    fail('first chunk is not IHDR');
+  }
+  const width = data.readUInt32BE(16);
+  const height = data.readUInt32BE(20);
+  if (width !== WANT_WIDTH || height !== WANT_HEIGHT) {
+    fail(`is ${width}x${height}, expected ${WANT_WIDTH}x${WANT_HEIGHT}`);
+  }
+}
+
+function main(): void {
+  const data = readSource();
+  checkPng(data);
+
+  try {
+    mkdirSync(outDir, { recursive: true });
+  } catch {
+    fail(`cannot create the output directory ${outDir}`);
+  }
+  const target = join(outDir, 'entry.png');
+  writeFileSync(target, data);
+
+  const written = readFileSync(target);
+  if (!written.equals(data)) {
+    fail(`what came back from ${target} differs from the source`);
+  }
+  const digest = createHash('sha256').update(written).digest('hex');
+  const size = statSync(target).size;
+  console.log(`entry.png -> ${target} (${size} bytes, sha256=${digest})`);
+}
+
+main();

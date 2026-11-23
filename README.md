@@ -4,17 +4,18 @@
 [![rank](https://make.fun/badge/news-image-20261123/gibalers-rgb/news-image-20261123/rank.svg)](https://make.fun/bounty/news-image-20261123/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123)
 [![reward](https://make.fun/badge/news-image-20261123/gibalers-rgb/news-image-20261123/reward.svg)](https://make.fun/bounty/news-image-20261123?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123)
 
-One image that sums up the world news of Monday, 23 November 2026: a
-newspaper front page — masthead and date, a painted scene of the day's
-lead story, and the six stories that defined the day. The Iran–US war
-widening at the Strait of Hormuz, with a site struck in Bahrain and two
-tankers hit; COP31 ending with no deal after the EU rejected a draft that
-omitted fossil fuels; a Russian drone strike leaving 14 missing in the
-Kyiv region; South Korea's education minister resigning over an AI
-cheating scandal; thousands marching in Lisbon against the cost of living;
-and a factory fire in Indonesia leaving three dead and 36 missing. The
-image is drawn once (AI illustration + sharp rendered text) and the
-program copies it to the output, byte for byte, every run.
+One picture that holds a whole day of world news: Monday, 23 November
+2026, laid out as a newspaper front page. The masthead and date sit at
+the top, under them a painted scene from the day's lead story, and then
+six short cards for the stories that mattered most. The war widening at
+the Strait of Hormuz — a site struck in Bahrain, two tankers hit. COP31
+in Antalya ending without a deal, after the EU refused a draft that left
+fossil fuels out. A Russian drone strike in the Kyiv region leaving 14
+people missing. South Korea's education minister resigning over an AI
+cheating scandal. Thousands marching in Lisbon against the cost of
+living. And a factory fire in Indonesia that left three dead and 36
+missing. The picture itself is drawn once, and the entry program hands
+it to the grader byte for byte on every run.
 
 ## Run it
 
@@ -22,15 +23,16 @@ program copies it to the output, byte for byte, every run.
 mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 ```
 
-This writes `out/entry.png` (1024×1024 PNG, under 1 MiB) — the whole entry.
+That writes `out/entry.png` — a 1024×1024 PNG, under 1 MiB, the whole
+entry in one file.
 
-## How the image was made
+## Where the picture comes from
 
-`compose.py` builds `entry.png`: it takes the AI-generated hero
-illustration in `assets/` (a burning tanker at the Strait of Hormuz, no
-text) and lays out the masthead, date, caption and six story cards with
-PIL, so every word is crisp and legible. Rebuild it with
-`python3 compose.py`.
+`compose.py` draws `entry.png`. It starts from the AI-painted hero
+illustration in `assets/` — a burning tanker in the Strait of Hormuz,
+with no words on it — then lays the masthead, the date, the caption
+and the six story cards over it with PIL, so every letter comes out
+crisp. To draw it again, run `python3 compose.py`.
 
 ---
 
